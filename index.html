@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<title>Document</title>
 	<link rel="stylesheet" href="reset.css">
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/styles/default.min.css">
 	<style>
 		html, body {
 			position: relative;
@@ -31,7 +32,7 @@
 			position: relative;
 			width: 100%;
 		}
-		.field * {
+		.field > * {
 			width: 50%;
 			display: inline-block;
 		}
@@ -50,31 +51,42 @@
 			width: 100% !important;
 			display: block;
 		}
+		.code {
+			padding:    3em;
+			background: #EEF;
+			color:      #222;
+			width:      100%;
+			overflow:   auto;
+		}
 	</style>
 </head>
 <body>
 	<div id="container">
 		<div class="field">
-			<label for="options">Select one</label><select id="options" data-bind="byID">
-				<option value="1">Lorem</option>
-				<option value="2">ipsum</option>
-				<option value="3">dolor</option>
-				<option value="4">sit</option>
+			<label for="options">Select one</label><select id="options" data-bind="latinspam">
+				<option>Lorem</option>
+				<option>ipsum</option>
+				<option>dolor</option>
+				<option>sit</option>
 			</select>
 		</div>
 
 		<div class="field three column editor">
-			<label for="paragraph">Enter some HTML</label><textarea data-bind="paragraph"></textarea>
+			<label for="paragraph">Enter some HTML</label><textarea class="row" data-bind="paragraph"></textarea>
 			<div class="output row" data-bind="paragraph"></div>
 		</div>
+
 		<div class="field">
 			<label for="numeric">Choose fill by number</label><input id="numeric" type="number" name="byID">
 		</div>
-		<div class="field prix hidden">
+
+		<div class="field prix">
 			<h1>Surprise!</h1>
+			<pre class="code"><code class="json" id="dump"></code></pre>
 		</div>
 	</div>
 	<script src="node_modules/jquery/dist/jquery.min.js"></script>
 	<script src="dist/app.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/highlight.min.js"></script>
 </body>
 </html>

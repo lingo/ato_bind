@@ -14,30 +14,24 @@ var viewModel = {
 };
 
 $(function() {
-
-	// We still use jQuery to register change handlers, as currently
-	// ato is only one-way binding: from model to DOM
-	// $('#container').on('change', 'select,input', function(e) {
-	// });
-	ato(viewModel, $('#container'), {
-		direction: 'both',
-		debug:     true,
-		bindable:  'p select input div'
+	var obj = {};
+	$(obj).on('modelChanged.ato', function(e, value, key, data) {
+		$('#dump').text(JSON.stringify(viewModel, (key,val) => key != '.ato' ? val : undefined, '    '));
+		$('pre code').each(function(i, block) {
+		  hljs.highlightBlock(block);
+		});
 	});
 
-	// ato(viewModel, document.body, {
-	// 	direction: 'dom',
-	// 	debug:     true,
-	// 	bindable:  'p',
-	// 	text:      true
-	// });
+	ato(viewModel, $('#container'),	{
+		debug:     true,
+		bindable:  'p select input div',
+		observers: obj
+	});
 
-	// ato(viewModel, document.body, {
-	// 	direction: 'dom',
-	// 	debug:     true,
-	// 	bindable:  'div',
-	// 	html:      true
-	// });
+	ato(viewModel, $('#container .editor'),	{
+		html:     {paragraph: true},
+		bindable: 'textarea,div'
+	});
 
 	window.viewModel = viewModel;
 });

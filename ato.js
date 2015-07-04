@@ -1,7 +1,7 @@
 "use strict";
 
-var jQuery, $;
-$ = jQuery = require('jquery');
+var jQuery = require('jquery');
+var $      = jQuery;
 
 function getKeyFromElement(elt, options) {
 	var keys = options.attributes;
@@ -10,9 +10,9 @@ function getKeyFromElement(elt, options) {
 }
 
 function getValueFromElement(elt, options) {
-	if (options.html) {
-		return elt.innerHTML;
-	}
+	// if (options.html) {
+		// return elt.innerHTML;
+	// }
 	if (options.text) {
 		return elt.textContent;
 	}
@@ -72,15 +72,20 @@ function getBindableSelector(options) {
 
 module.exports = function(data, $rootElt, options) {
 	options = Object.assign({
-		debug:      false,
+		attributes: ['data-bind', 'name'],
 		bindable:   'input,select,textarea,button',
-		attributes: ['data-bind', 'id', 'name'],
+		debug:      false,
+		direction:  'both', // dom|model|both
 		html:       false,
-		text:       false,
-		direction:  'dom' // dom|model|both
+		observers:  [],
+		text:       false
 	}, options);
 
-	$rootElt           = $($rootElt);
+	$rootElt = $($rootElt);
+	console.debug('ato root element', $rootElt);
+	if (options.observers) {
+		options.observers = $(options.observers);
+	}
 
 	var privateDataKey = '.ato';
 	if (!(privateDataKey in data)) {
@@ -89,7 +94,7 @@ module.exports = function(data, $rootElt, options) {
 
 	function filterBindableByKey($bindable, data, options) {
 		var out = {};
-		for(var k in data) {
+		for(let k in data) {
 			if (k === privateDataKey) {
 				continue;
 			}
@@ -102,7 +107,9 @@ module.exports = function(data, $rootElt, options) {
 				}
 			});
 		}
+
 		Object.keys(out).map(k => out[k] = $(out[k]));
+
 		return out;
 	}
 
@@ -142,17 +149,20 @@ module.exports = function(data, $rootElt, options) {
 			Object.defineProperty(data, k, {
 				get: function() {
 					if (options.debug) {
-						console.log(`ato: get ${k} => '${privateData.data[k]}'`);
+						console.debug(`ato: get ${k} => '${privateData.data[k]}'`);
 					}
 					return privateData.data[k];
 				},
 				set: function(val) {
 					privateData.data[k] = val;
+					if (options.observers) {
+						options.observers.trigger('modelChanged', [val, k, data]);
+					}
 					observers.forEach(
-						$coll => $coll && $coll.trigger('avl_binder_modelchanged', [val, k, data])
+						$coll => $coll && $coll.trigger('modelChanged', [val, k, data])
 					);
 					if (options.debug) {
-						console.log(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
+						console.debug(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
 					}
 				},
 				configurable: true,
@@ -164,12 +174,12 @@ module.exports = function(data, $rootElt, options) {
 
 	if (options.direction == 'both' || options.direction == 'dom') {
 		$bindable
-		.off('avl_binder_modelchanged.ato')
-		.on('avl_binder_modelchanged.ato', function(e, value, key, data) {
+		.off('modelChanged.ato')
+		.on('modelChanged.ato', function(e, value, key, data) {
 			var eltKey = this.getAttribute(getKeyFromElement(this, options));
 			if (eltKey == key) {
 				if (options.debug) {
-					console.log('ato.modelChanged event', this, key, value, data);
+					console.debug('ato.modelChanged event', this, key, value, data);
 				}
 				var $this = $(this);
 				setValueOnElement($this, value, key, data, options);
@@ -181,15 +191,18 @@ module.exports = function(data, $rootElt, options) {
 	}
 
 	if (options.direction == 'both' || options.direction == 'model') {
-		$bindable.on('change.ato input.ato', function(e) {
+		$bindable.on('input.ato', function(e) {
 			var eltKeyAttr = getKeyFromElement(this, options);
 			var eltKey     = this.getAttribute(eltKeyAttr);
 			if (options.debug) {
-				console.log(`ato: ${e.type} on ${eltKey}`);
+				console.debug(`ato: ${e.type} on ${eltKey}`);
 			}
 			data[eltKey] = getValueFromElement(this, options);
+			if (options.observers) {
+				// options.observers.trigger('modelChanged', [val, k, data]);
+			}
 			if (options.debug) {
-				console.log(`ato: DOM->Model set ${eltKey} = ${data[eltKey]}`);
+				console.debug(`ato: DOM->Model set ${eltKey} = ${data[eltKey]}`);
 			}
 			return true;
 		});

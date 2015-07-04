@@ -11,8 +11,13 @@ module.exports = {
     },
 	output: {
 		filename: path.join(__dirname, "dist", '[name].js'),
-        sourceMapFilename: '[file].map'
+        sourceMapFilename: '[file]_[hash].map'
 	},
+    externals: {
+        // require("jquery") is external and available
+        //  on the global var jQuery
+        "jquery": "jQuery"
+    },
 	module: {
 		loaders: [
 	        {
