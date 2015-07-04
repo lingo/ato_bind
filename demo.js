@@ -19,25 +19,25 @@ $(function() {
 	// ato is only one-way binding: from model to DOM
 	// $('#container').on('change', 'select,input', function(e) {
 	// });
-	viewModel = ato(viewModel, $('#container'), {
+	ato(viewModel, $('#container'), {
 		direction: 'both',
 		debug:     true,
 		bindable:  'p select input div'
 	});
 
-	ato(viewModel, document.body, {
-		direction: 'dom',
-		debug:     true,
-		bindable:  'p',
-		text:      true
-	});
+	// ato(viewModel, document.body, {
+	// 	direction: 'dom',
+	// 	debug:     true,
+	// 	bindable:  'p',
+	// 	text:      true
+	// });
 
-	ato(viewModel, document.body, {
-		direction: 'dom',
-		debug:     true,
-		bindable:  'div',
-		html:      true
-	});
+	// ato(viewModel, document.body, {
+	// 	direction: 'dom',
+	// 	debug:     true,
+	// 	bindable:  'div',
+	// 	html:      true
+	// });
 
 	window.viewModel = viewModel;
 });

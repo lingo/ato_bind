@@ -9,10 +9,6 @@ function getKeyFromElement(elt, options) {
 	return keys.length ? keys[0] : false;
 }
 
-function getElements(selector) {
-	return document.querySelectorAll(selector);
-}
-
 function getValueFromElement(elt, options) {
 	if (options.html) {
 		return elt.innerHTML;
@@ -23,22 +19,43 @@ function getValueFromElement(elt, options) {
 	return $(elt).val();
 }
 
-function setValueOnElement(elt, value, options) {
-	if (elt.tagName.toLowerCase() === 'input') {
-		switch(elt.type) {
-			case 'checkbox':
-			case 'radio':
-				// if (typeof(value) === 'boolean') {
-				$(elt).prop('checked', !!value);
-				// } else {
-				// }
-				break;
-			default:
-				$(elt).val(value);
-				break;
+function setValueOnElement($elt, value, key, data, options) {
+	if (options.html !== false) {
+		if (typeof(options.html) === 'function') {
+			$elt.html(options.html(value, $elt, key, data));
+		} else {
+			$elt.html(value);
 		}
-	} else {
-		$(elt).val(value);
+		return;
+	}
+	if (options.text) {
+		$elt.text(value);
+		return;
+	}
+
+	var elt = $elt[0]; // Plain Old Js object
+	var tag = elt.tagName.toLowerCase();
+	switch(tag) {
+		case 'input':
+			switch(elt.type) {
+				case 'checkbox':
+				case 'radio':
+					// if (typeof(value) === 'boolean') {
+					$(elt).prop('checked', !!value);
+					// } else {
+					// }
+					break;
+				default:
+					$(elt).val(value);
+					break;
+			}
+			break;
+		case 'select':
+		case 'textarea':
+			$elt.val(value);
+			break;
+		default:
+			$elt.text(value);
 	}
 }
 
@@ -52,24 +69,6 @@ function getBindableSelector(options) {
 	return selector;
 }
 
-function filterBindableByKey($bindable, data, options) {
-	var out = {};
-	for(var k in data) {
-		if (k.match(/^_ato/)) {
-			continue;
-		}
-		$bindable.each(function() {
-			var attribute = getKeyFromElement(this, options);
-			var key       = this.getAttribute(attribute);
-			if (key === k) {
-				out[key] = out[key] || [];
-				out[key].push(this);
-			}
-		});
-	}
-	Object.keys(out).map(k => out[k] = $(out[k]));
-	return out;
-}
 
 module.exports = function(data, $rootElt, options) {
 	options = Object.assign({
@@ -81,89 +80,99 @@ module.exports = function(data, $rootElt, options) {
 		direction:  'dom' // dom|model|both
 	}, options);
 
-	// var $;
-	// if (options.$) {
-	// 	$ = options.$;
-	// } else {
-	// 	$ = jQuery;
-	// }
-	$rootElt = $($rootElt);
+	$rootElt           = $($rootElt);
+
+	var privateDataKey = '.ato';
+	if (!(privateDataKey in data)) {
+		data[privateDataKey] = {};
+	}
+
+	function filterBindableByKey($bindable, data, options) {
+		var out = {};
+		for(var k in data) {
+			if (k === privateDataKey) {
+				continue;
+			}
+			$bindable.each(function() {
+				var attribute = getKeyFromElement(this, options);
+				var key       = this.getAttribute(attribute);
+				if (key === k) {
+					out[key] = out[key] || [];
+					out[key].push(this);
+				}
+			});
+		}
+		Object.keys(out).map(k => out[k] = $(out[k]));
+		return out;
+	}
+
 
 	var selector       = getBindableSelector(options);
 	var $bindable      = $rootElt.find(selector);
 	var $bindableByKey = filterBindableByKey($bindable, data, options);
 
-	var observersKey = '_ato_observers';
-	if (!(observersKey in data)) {
-		data[observersKey] = {};
-	}
-
-	for(var k in data) {
-		if (k.match(/^_ato/)) {
-			continue;
-		}
-		var privateK          = '_ato.' + k;
-		data[observersKey][k] = data[observersKey][k] || new Set();
-		var observers         = data[observersKey][k];
-
-		if (privateK in data) {
-			// Already bound!
-			// @todo add to observers
-			data[observersKey][k].add($bindableByKey[k]);
-		}
-		if (typeof(k) !== 'function') {
-			data[privateK] = data[k];
-			delete(data[k]);
-			data[observersKey][k].add($bindableByKey[k]);
-			Object.defineProperty(data, k, (function(data, k) {
-					return {
-					get: function() {
-						if (options.debug) {
-							console.log(`ato: get ${k} => '${data[privateK]}'`);
-						}
-						return data[privateK];
-					},
-					set: function(val) {
-						data[privateK] = val;
-						data[observersKey][k].forEach(
-							$coll => $coll.trigger('avl_binder_modelchanged', [val, k, data])
-						);
-						if (options.debug) {
-							console.log(`ato: set ${k} to ${val} => '${data[privateK]}`);
-						}
-					},
-					configurable: true,
-					enumerable:   true
-				};
-			})(data, k));
-		}
-	}
-
-	$bindable
-	.off('avl_binder_modelchanged.ato');
+	data[privateDataKey].observers = data[privateDataKey].observers || {};
+	data[privateDataKey].data      = data[privateDataKey].data || {};
+	var privateData                = data[privateDataKey];
 
 	if (options.direction == 'both' || options.direction == 'dom') {
-		$bindable.on('avl_binder_modelchanged.ato', function(e, value, key, data) {
+		for(let k in data) {
+			if (k === privateDataKey) {
+				continue;
+			}
+
+			privateData.observers[k] = privateData.observers[k] || new Set();
+			let observers = privateData.observers[k];
+
+			if (k in privateData.data) {
+				// Already bound!
+				// @todo add to observers
+				observers.add($bindableByKey[k]);
+				continue;
+			}
+
+			if (typeof(k) === 'function') {
+				continue;
+			}
+
+			privateData.data[k] = data[k];
+			delete(data[k]);
+			observers.add($bindableByKey[k]);
+
+			Object.defineProperty(data, k, {
+				get: function() {
+					if (options.debug) {
+						console.log(`ato: get ${k} => '${privateData.data[k]}'`);
+					}
+					return privateData.data[k];
+				},
+				set: function(val) {
+					privateData.data[k] = val;
+					observers.forEach(
+						$coll => $coll && $coll.trigger('avl_binder_modelchanged', [val, k, data])
+					);
+					if (options.debug) {
+						console.log(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
+					}
+				},
+				configurable: true,
+				enumerable:   true
+			});
+		}
+	}
+
+
+	if (options.direction == 'both' || options.direction == 'dom') {
+		$bindable
+		.off('avl_binder_modelchanged.ato')
+		.on('avl_binder_modelchanged.ato', function(e, value, key, data) {
 			var eltKey = this.getAttribute(getKeyFromElement(this, options));
 			if (eltKey == key) {
 				if (options.debug) {
 					console.log('ato.modelChanged event', this, key, value, data);
 				}
 				var $this = $(this);
-				if (options.html !== false) {
-					if (typeof(options.html) === 'function') {
-						$this.html(options.html(value, $this, key, data));
-					} else {
-						$this.html(value);
-					}
-				} else {
-					if (options.text) {
-						$this.text(value);
-					} else {
-						setValueOnElement(this, value, options);
-						// $this.val(value);
-					}
-				}
+				setValueOnElement($this, value, key, data, options);
 				if (typeof(options.onUpdate) === 'function') {
 					options.onUpdate.call($this, value, key, data);
 				}

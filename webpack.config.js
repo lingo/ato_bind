@@ -4,7 +4,7 @@ var path    = require('path');
 // webpack.config.js
 module.exports = {
 	entry: {
-		demo: "demo.js"
+		app: ["demo.js"]
 	},
     resolve: {
     	root: __dirname
