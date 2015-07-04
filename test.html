@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+</head>
+<body>
+	<div id="container">
+		<p data-bind="paragraph"></p>
+		<select id="byID">
+			<option value="1">Option 1</option>
+			<option value="2">Option 2</option>
+			<option value="3">Option 3</option>
+			<option value="4">Option 4</option>
+		</select>
+		<input type="text" id="in">
+	</div>
+	<h2>Out:</h2>
+	<p data-bind="in"></p>
+	<div data-bind="in"></div>
+	<script src="dist/demo.js"></script>
+</body>
+</html>
