@@ -11,9 +11,8 @@
  *
  */
 
-var MicroEvent = require('microevent');
-
-var AtoFn = require('./functions');
+var AtoFn     = require('./functions');
+var addEvents = require('./events');
 
 function Ato(data, $rootElt, options) {
 	options = Object.assign({
@@ -29,13 +28,12 @@ function Ato(data, $rootElt, options) {
 	if (typeof($rootElt) === 'string') {
 		$rootElt = document.querySelector($rootElt);
 	}
-
-	MicroEvent.mixin($rootElt);
+	addEvents(data);
 
 	var privateData    = AtoFn.initPrivateData(data, options);
 	var selector       = AtoFn.getBindableSelector(options);
-	var $bindable      = AtoFn.getChildElements($rootElt, selector, options);
-	var $bindableByKey = AtoFn.filterBindableByKey($bindable, data, options);
+	var $bindable      = AtoFn.getChildElements($rootElt, selector);
+	var $bindableByKey = AtoFn.filterBindableByKey($bindable, data, options.attributes);
 
 	if (options.direction == 'both' || options.direction == 'dom') {
 		for(let k in data) {
@@ -69,11 +67,10 @@ function Ato(data, $rootElt, options) {
 				},
 				set: function(val) {
 					privateData.data[k] = val;
-					$rootElt.trigger('modelChanged', val, k, data);
-					// observers.forEach(
-						// coll => { AtoFn.triggerAll(coll, 'modelChanged', val, k, data); }
-					// );
-					data.trigger('change.ato', k, val);
+					// Internal event
+					data.trigger('ato.modelChanged', k, val);
+					// Event for library users
+					data.trigger('change', k, val);
 					if (options.debug) {
 						console.debug(`ato.set '${k}' to '${val}'`);
 					}
@@ -83,32 +80,31 @@ function Ato(data, $rootElt, options) {
 			});
 		}
 
-		$rootElt.on('modelChanged', function(value, key, data, e) {
+		data.on('ato.modelChanged', function(e, key, value) {
 			var elts = $bindableByKey.get(key);
 			if (!elts) {
 				return;
 			}
 			for(var i=0; i<elts.length; i++) {
 				var elt = elts[i];
-				var eltKey = elt.getAttribute(AtoFn.getKeyFromElement(elt, options));
 				if (options.debug) {
 					console.debug(`ato.event: modelChanged on '${elt}' -> '${key}'`, elt, key, value, data);
 				}
 				AtoFn.setValueOnElement(elt, value, key, data, options);
-				data.trigger('updated.ato', elt, key, value, data);
+				data.trigger('update', elt, key, value);
 			}
 		});
 	}
 
 	if (options.direction == 'both' || options.direction == 'model') {
-		AtoFn.addEventListener($rootElt, 'input', function(e) {
+		AtoFn.on($rootElt, 'input', function(e) {
 			var elt = e.target || this;
-			var eltKeyAttr = AtoFn.getKeyFromElement(elt, options);
+			var eltKeyAttr = AtoFn.getKeyFromElement(elt, options.attributes);
 			var eltKey     = elt.getAttribute(eltKeyAttr);
 			if (options.debug) {
 				console.debug(`ato.event: '${e.type}' on '${elt}' -> '${eltKey}'`);
 			}
-			data[eltKey] = AtoFn.getValueFromElement(elt, options);
+			data[eltKey] = AtoFn.getValueFromElement(elt, options.text);
 			if (options.debug) {
 				console.debug(`ato: DOM->Model set '${eltKey}' = '${data[eltKey]}'`);
 			}
@@ -116,9 +112,8 @@ function Ato(data, $rootElt, options) {
 		});
 	}
 
-	MicroEvent.mixin(data);
 	return data;
-};
+}
 
 
 module.exports = Ato;

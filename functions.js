@@ -1,26 +1,18 @@
 "use strict";
 
-var AForEach = Array.prototype.forEach;
-
 module.exports = {
 	isEnum: function(o,k) {
 		return o.hasOwnProperty(k);
 	},
 
-	getKeyFromElement: function(elt, options) {
-		var keys = options.attributes;
-		keys     = keys.filter(k => elt.hasAttribute(k));
-		return keys.length ? keys[0] : false;
-	},
-
-	removeEventListener: function(el, eventName, handler) {
+	off: function(el, eventName, handler) {
 		if (el.removeEventListener)
 			el.removeEventListener(eventName, handler);
 		else
 			el.detachEvent('on' + eventName, handler);
 	},
 
-	addEventListener: function(el, eventName, handler) {
+	on: function(el, eventName, handler) {
 		if (el.addEventListener) {
 			el.addEventListener(eventName, handler);
 		} else {
@@ -28,27 +20,10 @@ module.exports = {
 		}
 	},
 
-	getValueFromElement: function(elt, options) {
-		if (options.text) {
-			return elt.textContent;
-		}
-		var attr = this.tagToAttribute(elt);
-		if (attr === false) {
-			if (elt.selectedIndex >= 0) {
-				let option = elt[elt.selectedIndex];
-				if (option.hasAttribute('value')) {
-					return option.value;
-				} else {
-					return option.textContent;
-				}
-			}
-		}
-		return elt[attr];
-	},
-
 	selectOption: function(elt, value) {
+		var i;
 		// Seek for matching value first
-		for(var i=0; i<options.length; i++) {
+		for(i=0; i < elt.options.length; i++) {
 			if (elt.options[i].hasAttribute('value') && elt.value == value) {
 				elt.selectedIndex = i;
 				return;
@@ -56,7 +31,7 @@ module.exports = {
 		}
 		// Seek for matching option text
 		if (typeof(value) === 'string' && (Number(value) != value)) {
-			for(var i=0; i<options.length; i++) {
+			for(i=0; i < elt.options.length; i++) {
 				if (elt.options[i].textContent == value) {
 					elt.selectedIndex = i;
 					return;
@@ -81,16 +56,51 @@ module.exports = {
 		return 'value';
 	},
 
-	setValueOnElement: function(elt, value, key, data, options) {
-		if (options.html) {
-			try {
-				return elt.innerHTML = options.html(value, elt, key, data);
-			} catch(e) {
-				return elt.innerHTML = value;
+	getKeyFromElement: function(elt, validAttr) {
+		var keys = validAttr.filter(k => elt.hasAttribute(k));
+		return keys.length ? keys[0] : false;
+	},
+
+	getValueFromElement: function(elt, asText) {
+		if (asText) {
+			return elt.textContent;
+		}
+		var attr = this.tagToAttribute(elt);
+		if (attr === false) {
+			if (elt.selectedIndex >= 0) {
+				let option = elt[elt.selectedIndex];
+				if (option.hasAttribute('value')) {
+					return option.value;
+				} else {
+					return option.textContent;
+				}
 			}
 		}
-		if (options.text) {
-			return elt.textContent = value;
+		return elt[attr];
+	},
+
+	setValueOnElement: function(elt, value, key, data, options) {
+		var html = options.html;
+		if (typeof(html) === 'object') {
+			html = (key in html) ? html[key] : false;
+		}
+		if (html) {
+			try {
+				return (elt.innerHTML = html(value, elt, key, data));
+			} catch(e) {
+				return (elt.innerHTML = value);
+			}
+		}
+		var text = options.text;
+		if (typeof(text) === 'object') {
+			text = (key in text) ? text[key] : false;
+		}
+		if (text) {
+			try {
+				return (elt.textContent = text(value, elt, key, data));
+			} catch(e) {
+				return (elt.textContent = value);
+			}
 		}
 
 		var attr = this.tagToAttribute(elt);
@@ -103,7 +113,6 @@ module.exports = {
 		}
 	},
 
-
 	getBindableSelector: function(options) {
 		if (typeof(options.bindable) === 'string') {
 			options.bindable = options.bindable.split(/[,\s]/g);
@@ -114,7 +123,7 @@ module.exports = {
 		return selector;
 	},
 
-	filterBindableByKey: function($bindable, data, options) {
+	filterBindableByKey: function($bindable, data, validAttr) {
 		var out = new Map();
 
 		for(let k in data) {
@@ -123,7 +132,7 @@ module.exports = {
 			}
 			for(let i=0; i < $bindable.length; i++) {
 				let elt       = $bindable[i];
-				var attribute = this.getKeyFromElement(elt, options);
+				var attribute = this.getKeyFromElement(elt, validAttr);
 				var key       = elt.getAttribute(attribute);
 				if (key       === k) {
 					if (!out.has(key)) {
@@ -136,58 +145,26 @@ module.exports = {
 		return out;
 	},
 
+	defineSimpleDataProperty: function(obj, name, value) {
+		return Object.defineProperty(obj, name, {
+			value:      value,
+			enumerable: false
+		});
+	},
+
 	initPrivateData: function(data, options) {
 		var privateDataKey = options.privateDataKey;
 		if (!(privateDataKey in data)) {
 			data[privateDataKey] = {};
-			Object.defineProperty(data, privateDataKey, {
-				value: {
-					observers: {},
-					data:      {}
-				},
-				enumerable: false
+			this.defineSimpleDataProperty(data, privateDataKey, {
+				observers: {},
+				data:      {}
 			});
 		}
 		return data[privateDataKey];
 	},
 
-	getChildElements: function(root, selector, options) {
-		if (ATO_LIBRARY === 'jquery') {
-			return $(root).find(selector);
-		}
-		return Array.prototype.map.call(
-			root.querySelectorAll(selector),
-			elt => { MicroEvent.mixin(elt); return elt; }
-		);
-	},
-
-	triggerAll: function(collection, event, value, key, data) {
-		if (!collection || !collection.length) {
-			return;
-		}
-		if (data.length === 1 && Array.isArray(data[0])) {
-			data = data[0];
-		}
-		AForEach.call(collection, elt => {
-			elt.trigger(event, value, key, data);
-		});
-	},
-
-	domOnAll: function($coll, event, handler) {
-		AForEach.call($coll, elt => {
-			addEventListener(elt, event, handler);
-		});
-	},
-
-	customOnAll: function($coll, event, handler) {
-		AForEach.call($coll, elt => {
-			elt.on(event, handler);
-		});
-	},
-
-	domOffAll: function($coll, event) {
-		AForEach.call($coll, elt => {
-			removeEventListener(elt, event, handler);
-		});
+	getChildElements: function(root, selector) {
+		return root.querySelectorAll(selector);
 	}
 };
