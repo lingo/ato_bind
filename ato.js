@@ -257,7 +257,7 @@ function Ato(data, $rootElt, options) {
 					observers.forEach(
 						coll => { triggerAll(coll, 'modelChanged', val, k, data); }
 					);
-					data.trigger('change.ato', val, k);
+					data.trigger('change.ato', k, val);
 					if (options.debug) {
 						console.debug(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
 					}

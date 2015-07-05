@@ -22,7 +22,7 @@
 			padding: 3em;
 		}
 
-		#container {
+		.container {
 			max-width: 40em;
 			position: relative;
 		}
@@ -61,27 +61,36 @@
 		.editor textarea {
 			min-height: 10em;
 		}
+
+		.highlight {
+			background: #FF5;
+			color:      #444;
+			font-size:  1.3em;
+		}
 	</style>
 </head>
 <body>
-	<div id="container">
+	<div id="form_container" class="container">
 		<div class="field">
 			<label for="options">Select one</label><select id="options" data-bind="latinspam">
 				<option>Lorem</option>
 				<option>ipsum</option>
 				<option>dolor</option>
 				<option>sit</option>
+				<option>amet</option>
+				<option>consectetur</option>
+				<option>adipisicing</option>
+				<option>elit</option>
 			</select>
 		</div>
 
-		<div class="field three column editor">
-			<label for="paragraph">Enter some HTML</label><textarea class="row" data-bind="paragraph">
-<em>This is a test</em><select><option>Really?</select><div style="background: #37c; color: white; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); font-weight: bold; padding: 1vw; margin: 2vw; border: 0.5vw solid gainsboro; border-radius: 0.5vw">Lorem ipsum dolor sit amet.</textarea>
-			<div class="output row" data-bind="paragraph"></div>
+		<div class="field">
+			<p>Using option: <span data-bind="latinspam"></span></p>
 		</div>
 
-		<div class="field">
-			<label for="numeric">Choose fill by number</label><input id="numeric" type="number" name="latinspam">
+		<div class="field three column editor">
+			<label for="paragraph">Enter some HTML</label><textarea class="row" data-bind="paragraph"></textarea>
+			<div class="output row" data-bind="paragraph"></div>
 		</div>
 
 		<div class="field prix">
@@ -89,6 +98,7 @@
 			<pre class="code"><code class="json" id="dump"></code></pre>
 		</div>
 	</div>
+
 	<script src="http://localhost:8080/ato/dist/app.js"></script>
 	<script>
 	// <script src="node_modules/jquery/dist/jquery.min.js">
