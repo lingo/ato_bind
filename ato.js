@@ -1,205 +1,19 @@
 "use strict";
+/**
+ * Bind properties instead of data's keys
+ *
+ * On set: emit modelChanged event to root element, which is listening
+ * When root element catches this event, needs to see which key changed
+ * and map that to an element, and hence update element.
+ * So, root element needs to have a map of key -> element
+ *
+ * On element change: update model.
+ *
+ */
 
-var MicroEvent = require('microevent-mistic100');
+var MicroEvent = require('microevent');
 
-function getKeyFromElement(elt, options) {
-	var keys = options.attributes;
-	keys     = keys.filter(k => elt.hasAttribute(k));
-	return keys.length ? keys[0] : false;
-}
-
-function removeEventListener(el, eventName, handler) {
-  if (el.removeEventListener)
-    el.removeEventListener(eventName, handler);
-  else
-    el.detachEvent('on' + eventName, handler);
-}
-
-function addEventListener(el, eventName, handler) {
-  if (el.addEventListener) {
-    el.addEventListener(eventName, handler);
-  } else {
-    el.attachEvent('on' + eventName, function(){
-      handler.call(el);
-    });
-  }
-}
-
-function getValueFromElement(elt, options) {
-	// if (options.html) {
-		// return elt.innerHTML;
-	// }
-	if (options.text) {
-		return elt.textContent;
-	}
-	switch(elt.tagName.toLowerCase()) {
-		case 'input':
-		case 'textarea':
-			if (elt.type === 'checkbox' || elt.type === 'radio') {
-				if (!elt.hasAttribute('value')) {
-					return !!elt.checked;
-				}
-			}
-			return elt.value;
-		case 'select':
-			if (elt.selectedIndex >= 0) {
-				let option = elt[elt.selectedIndex];
-				if (option.hasAttribute('value')) {
-					return option.value;
-				} else {
-					return option.textContent;
-				}
-			}
-			return undefined;
-	}
-	return elt.textContent;
-}
-
-function selectOption(elt, value) {
-	var foundOption = false;
-	for(var i=0; i<options.length; i++) {
-		if (elt.options[i].value == value) {
-			elt.selectedIndex = i;
-			foundOption = true;
-		}
-	}
-	if (!foundOption) {
-		if (typeof(value) === 'string' && (Number(value) != value)) {
-			for(var i=0; i<options.length; i++) {
-				if (elt.options[i].textContent == value) {
-					elt.selectedIndex = i;
-					foundOption = true;
-				}
-			}
-		}
-		else {
-			elt.selectedIndex = value;
-		}
-	}
-}
-
-function setValueOnElement(elt, value, key, data, options) {
-	if (options.html !== false) {
-		if (typeof(options.html) === 'function') {
-			elt.innerHTML = options.html(value, elt, key, data);
-		} else {
-			elt.innerHTML = value;
-		}
-		return;
-	}
-	if (options.text) {
-		elt.textContent = value;
-		return;
-	}
-
-	var tag = elt.tagName.toLowerCase();
-	switch(tag) {
-		case 'input':
-		case 'textarea':
-			switch(elt.type) {
-				case 'checkbox':
-				case 'radio':
-					if (typeof(value) === 'boolean') {
-						elt.checked = !!value;
-					} else {
-						elt.value = value;
-					}
-					break;
-				default:
-					elt.value = value;
-					break;
-			}
-			break;
-		case 'select':
-			selectOption(elt, value);
-			break;
-		default:
-			elt.textContent = value;
-			break;
-	}
-}
-
-function getBindableSelector(options) {
-	if (typeof(options.bindable) === 'string') {
-		options.bindable = options.bindable.split(/[,\s]/g);
-	}
-	var selector = options.bindable
-		.map(tag => options.attributes.map(attr => `${tag}[${attr}]`).join(','))
-		.join(',');
-	return selector;
-}
-
-function filterBindableByKey($bindable, data, options) {
-	var out = new Map();
-
-	console.log(typeof($bindable), $bindable);
-	for(let k in data) {
-		if (k === options.privateDataKey) {
-			continue;
-		}
-		for(let i=0; i < $bindable.length; i++) {
-			let elt       = $bindable[i];
-			var attribute = getKeyFromElement(elt, options);
-			var key       = elt.getAttribute(attribute);
-			if (key       === k) {
-				if (!out.has(key)) {
-					out.set(key, []);
-				}
-				out.get(key).push(elt);
-			}
-		}
-	}
-	return out;
-}
-
-function initPrivateData(data, options) {
-	var privateDataKey = options.privateDataKey;
-	if (!(privateDataKey in data)) {
-		data[privateDataKey] = {};
-	}
-	data[privateDataKey].observers = data[privateDataKey].observers || {};
-	data[privateDataKey].data      = data[privateDataKey].data || {};
-	return data[privateDataKey];
-}
-
-function getChildElements(root, selector, options) {
-	return Array.prototype.map.call(root.querySelectorAll(selector),
-		elt => { MicroEvent.mixin(elt); return elt; });
-}
-
-function triggerAll(collection, event, value, key, data) {
-	if (!collection || !collection.length) {
-		return;
-	}
-	if (data.length === 1 && Array.isArray(data[0])) {
-		data = data[0];
-	}
-	for(let i=0; i<collection.length; i++) {
-		let elt = collection[i];
-		elt.trigger(event, value, key, data);
-	}
-}
-
-function domOnAll($coll, event, handler) {
-	for(let i=0; i<$coll.length; i++) {
-		let elt = $coll[i];
-		addEventListener(elt, event, handler);
-	}
-}
-
-function customOnAll($coll, event, handler) {
-	for(let i=0; i<$coll.length; i++) {
-		let elt = $coll[i];
-		elt.on(event, handler);
-	}
-}
-
-function domOffAll($coll, event) {
-	for(let i=0; i<$coll.length; i++) {
-		let elt = $coll[i];
-		removeEventListener(elt, event, handler);
-	}
-}
+var AtoFn = require('./functions');
 
 function Ato(data, $rootElt, options) {
 	options = Object.assign({
@@ -216,23 +30,24 @@ function Ato(data, $rootElt, options) {
 		$rootElt = document.querySelector($rootElt);
 	}
 
-	var privateData    = initPrivateData(data, options);
-	var selector       = getBindableSelector(options);
-	var $bindable      = getChildElements($rootElt, selector, options);
-	var $bindableByKey = filterBindableByKey($bindable, data, options);
+	MicroEvent.mixin($rootElt);
+
+	var privateData    = AtoFn.initPrivateData(data, options);
+	var selector       = AtoFn.getBindableSelector(options);
+	var $bindable      = AtoFn.getChildElements($rootElt, selector, options);
+	var $bindableByKey = AtoFn.filterBindableByKey($bindable, data, options);
 
 	if (options.direction == 'both' || options.direction == 'dom') {
 		for(let k in data) {
-			if (k === options.privateDataKey) {
+			if (!AtoFn.isEnum(data, k)) {
 				continue;
 			}
-
 			privateData.observers[k] = privateData.observers[k] || new Set();
 			let observers = privateData.observers[k];
 
 			if (k in privateData.data) {
-				// Already bound!
-				// @todo add to observers
+				// This element is already data-bound
+				// so add the new elements to observers
 				observers.add($bindableByKey.get(k));
 				continue;
 			}
@@ -248,59 +63,60 @@ function Ato(data, $rootElt, options) {
 			Object.defineProperty(data, k, {
 				get: function() {
 					if (options.debug) {
-						console.debug(`ato: get ${k} => '${privateData.data[k]}'`);
+						console.debug(`ato.get '${k}' => '${privateData.data[k]}'`);
 					}
 					return privateData.data[k];
 				},
 				set: function(val) {
 					privateData.data[k] = val;
-					observers.forEach(
-						coll => { triggerAll(coll, 'modelChanged', val, k, data); }
-					);
+					$rootElt.trigger('modelChanged', val, k, data);
+					// observers.forEach(
+						// coll => { AtoFn.triggerAll(coll, 'modelChanged', val, k, data); }
+					// );
 					data.trigger('change.ato', k, val);
 					if (options.debug) {
-						console.debug(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
+						console.debug(`ato.set '${k}' to '${val}'`);
 					}
 				},
 				configurable: true,
 				enumerable:   true
 			});
 		}
-	}
 
-
-	if (options.direction == 'both' || options.direction == 'dom') {
-		// ($bindable, 'modelChanged.ato');
-
-		customOnAll($bindable, 'modelChanged', function(value, key, data) {
-			var eltKey = this.getAttribute(getKeyFromElement(this, options));
-			if (eltKey == key) {
+		$rootElt.on('modelChanged', function(value, key, data, e) {
+			var elts = $bindableByKey.get(key);
+			if (!elts) {
+				return;
+			}
+			for(var i=0; i<elts.length; i++) {
+				var elt = elts[i];
+				var eltKey = elt.getAttribute(AtoFn.getKeyFromElement(elt, options));
 				if (options.debug) {
-					console.debug('ato.modelChanged event', this, key, value, data);
+					console.debug(`ato.event: modelChanged on '${elt}' -> '${key}'`, elt, key, value, data);
 				}
-				setValueOnElement(this, value, key, data, options);
-				data.trigger('updated.ato', this, key, value, data);
+				AtoFn.setValueOnElement(elt, value, key, data, options);
+				data.trigger('updated.ato', elt, key, value, data);
 			}
 		});
 	}
 
 	if (options.direction == 'both' || options.direction == 'model') {
-		domOnAll($bindable, 'input', function(e) {
-			var eltKeyAttr = getKeyFromElement(this, options);
-			var eltKey     = this.getAttribute(eltKeyAttr);
+		AtoFn.addEventListener($rootElt, 'input', function(e) {
+			var elt = e.target || this;
+			var eltKeyAttr = AtoFn.getKeyFromElement(elt, options);
+			var eltKey     = elt.getAttribute(eltKeyAttr);
 			if (options.debug) {
-				console.debug(`ato: ${e.type} on ${eltKey}`);
+				console.debug(`ato.event: '${e.type}' on '${elt}' -> '${eltKey}'`);
 			}
-			data[eltKey] = getValueFromElement(this, options);
+			data[eltKey] = AtoFn.getValueFromElement(elt, options);
 			if (options.debug) {
-				console.debug(`ato: DOM->Model set ${eltKey} = ${data[eltKey]}`);
+				console.debug(`ato: DOM->Model set '${eltKey}' = '${data[eltKey]}'`);
 			}
 			return true;
 		});
 	}
 
 	MicroEvent.mixin(data);
-
 	return data;
 };
 

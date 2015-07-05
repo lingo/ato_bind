@@ -27,15 +27,14 @@ function ready(fn) {
 
 ready(function() {
 
-	ato(viewModel, $('#form_container'), {
-		debug:     true,
-		bindable:  'p select span input div'
-		// observers: obj
-	});
+	// ato(viewModel, $('#form_container'), {
+		// debug:     true,
+		// bindable:  'p select span input div'
+	// });
 
-	ato(viewModel, $('#form_container .editor'), {
+	ato(viewModel, $('#form_container'), {
 		html:     true,
-		bindable: 'textarea,div'
+		bindable: 'textarea div select p span input'
 	});
 var text = `Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
 tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,

@@ -8,7 +8,10 @@ module.exports = {
 		app: ['demo.js']
 	},
     resolve: {
-    	root: __dirname
+    	root: __dirname,
+    	alias: {
+    		microevent: "microevent-mistic100"
+    	}
     },
 	output: {
 		path:     './dist',
@@ -17,9 +20,10 @@ module.exports = {
         publicPath:        '/ato/dist/'
 	},
     externals: {
-        // require("jquery") is external and available
-        //  on the global var jQuery
-        "jquery": "jQuery"
+        //            require("jquery") is external and available
+        //            on the global var jQuery
+        "jquery":     "jQuery",
+        "microevent": "MicroEvent"
     },
 	module: {
 		loaders: [
@@ -37,6 +41,9 @@ module.exports = {
 	},
 	devtool: '#source-map',
 	plugins: [
+		new webpack.DefinePlugin({
+			ATO_LIBRARY: "'microevent'"
+		})
 	]
 };
 
