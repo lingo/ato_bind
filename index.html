@@ -58,6 +58,9 @@
 			width:      100%;
 			overflow:   auto;
 		}
+		.editor textarea {
+			min-height: 10em;
+		}
 	</style>
 </head>
 <body>
@@ -72,21 +75,25 @@
 		</div>
 
 		<div class="field three column editor">
-			<label for="paragraph">Enter some HTML</label><textarea class="row" data-bind="paragraph"></textarea>
+			<label for="paragraph">Enter some HTML</label><textarea class="row" data-bind="paragraph">
+<em>This is a test</em><select><option>Really?</select><div style="background: #37c; color: white; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); font-weight: bold; padding: 1vw; margin: 2vw; border: 0.5vw solid gainsboro; border-radius: 0.5vw">Lorem ipsum dolor sit amet.</textarea>
 			<div class="output row" data-bind="paragraph"></div>
 		</div>
 
 		<div class="field">
-			<label for="numeric">Choose fill by number</label><input id="numeric" type="number" name="byID">
+			<label for="numeric">Choose fill by number</label><input id="numeric" type="number" name="latinspam">
 		</div>
 
 		<div class="field prix">
-			<h1>Surprise!</h1>
+			<h1>ViewModel</h1>
 			<pre class="code"><code class="json" id="dump"></code></pre>
 		</div>
 	</div>
-	<script src="node_modules/jquery/dist/jquery.min.js"></script>
-	<script src="dist/app.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/highlight.min.js"></script>
+	<script src="http://localhost:8080/ato/dist/app.js"></script>
+	<script>
+	// <script src="node_modules/jquery/dist/jquery.min.js">
+	// <script src="/ato/dist/app.js">
+	// <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.6/highlight.min.js"
+	</script>
 </body>
 </html>

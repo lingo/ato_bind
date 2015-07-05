@@ -4,14 +4,17 @@ var path    = require('path');
 // webpack.config.js
 module.exports = {
 	entry: {
-		app: ["demo.js"]
+		ato: ["ato.js"],
+		app: ['demo.js']
 	},
     resolve: {
     	root: __dirname
     },
 	output: {
-		filename: path.join(__dirname, "dist", '[name].js'),
-        sourceMapFilename: '[file]_[hash].map'
+		path:     './dist',
+		filename: '[name].js',
+        sourceMapFilename: '[file]_[hash].map',
+        publicPath:        '/ato/dist/'
 	},
     externals: {
         // require("jquery") is external and available
@@ -25,7 +28,8 @@ module.exports = {
 	        		exclude: /node_modules/,
 	        		loader:  'babel',
 	        		query: {
-	        			plugins: 'object-assign'
+	        			// optional:    'runtime',
+	        			plugins:     'object-assign'
 	        			// optional: 'minification.removeConsole'
 	        		}
 	        }

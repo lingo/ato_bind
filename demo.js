@@ -1,6 +1,7 @@
 "use strict";
 
-var $   = require('jquery');
+var $ = document.querySelector.bind(document);
+
 var ato = require('ato');
 /**
  * This is the view model, here exposed
@@ -8,29 +9,42 @@ var ato = require('ato');
  */
 var viewModel = {
 	'paragraph': '',
-	'byID':      '',
-	'display':   '',
-	'in':        ''
+	'latinspam': ''
 };
 
-$(function() {
-	var obj = {};
-	$(obj).on('modelChanged.ato', function(e, value, key, data) {
-		$('#dump').text(JSON.stringify(viewModel, (key,val) => key != '.ato' ? val : undefined, '    '));
-		$('pre code').each(function(i, block) {
-		  hljs.highlightBlock(block);
-		});
-	});
+function ready(fn) {
+  if (document.readyState != 'loading'){
+    fn();
+  } else if (document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', fn);
+  } else {
+    document.attachEvent('onreadystatechange', function() {
+      if (document.readyState != 'loading')
+        fn();
+    });
+  }
+}
 
-	ato(viewModel, $('#container'),	{
+ready(function() {
+
+	ato(viewModel, '#container', {
 		debug:     true,
-		bindable:  'p select input div',
-		observers: obj
+		bindable:  'p select input div'
+		// observers: obj
 	});
 
-	ato(viewModel, $('#container .editor'),	{
-		html:     {paragraph: true},
+	ato(viewModel, '#container .editor', {
+		html:     true,
 		bindable: 'textarea,div'
+	});
+
+	viewModel.on('change.ato', function(key, value) {
+		$('#dump')
+			.textContent = JSON.stringify(viewModel,
+				(key, val) => key != '.ato' ? val : undefined,
+				'    '
+			);
+		hljs.highlightBlock($('pre code'));
 	});
 
 	window.viewModel = viewModel;

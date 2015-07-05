@@ -1,12 +1,28 @@
 "use strict";
 
-var jQuery = require('jquery');
-var $      = jQuery;
+var MicroEvent = require('microevent-mistic100');
 
 function getKeyFromElement(elt, options) {
 	var keys = options.attributes;
 	keys     = keys.filter(k => elt.hasAttribute(k));
 	return keys.length ? keys[0] : false;
+}
+
+function removeEventListener(el, eventName, handler) {
+  if (el.removeEventListener)
+    el.removeEventListener(eventName, handler);
+  else
+    el.detachEvent('on' + eventName, handler);
+}
+
+function addEventListener(el, eventName, handler) {
+  if (el.addEventListener) {
+    el.addEventListener(eventName, handler);
+  } else {
+    el.attachEvent('on' + eventName, function(){
+      handler.call(el);
+    });
+  }
 }
 
 function getValueFromElement(elt, options) {
@@ -16,46 +32,90 @@ function getValueFromElement(elt, options) {
 	if (options.text) {
 		return elt.textContent;
 	}
-	return $(elt).val();
+	switch(elt.tagName.toLowerCase()) {
+		case 'input':
+		case 'textarea':
+			if (elt.type === 'checkbox' || elt.type === 'radio') {
+				if (!elt.hasAttribute('value')) {
+					return !!elt.checked;
+				}
+			}
+			return elt.value;
+		case 'select':
+			if (elt.selectedIndex >= 0) {
+				let option = elt[elt.selectedIndex];
+				if (option.hasAttribute('value')) {
+					return option.value;
+				} else {
+					return option.textContent;
+				}
+			}
+			return undefined;
+	}
+	return elt.textContent;
 }
 
-function setValueOnElement($elt, value, key, data, options) {
+function selectOption(elt, value) {
+	var foundOption = false;
+	for(var i=0; i<options.length; i++) {
+		if (elt.options[i].value == value) {
+			elt.selectedIndex = i;
+			foundOption = true;
+		}
+	}
+	if (!foundOption) {
+		if (typeof(value) === 'string' && (Number(value) != value)) {
+			for(var i=0; i<options.length; i++) {
+				if (elt.options[i].textContent == value) {
+					elt.selectedIndex = i;
+					foundOption = true;
+				}
+			}
+		}
+		else {
+			elt.selectedIndex = value;
+		}
+	}
+}
+
+function setValueOnElement(elt, value, key, data, options) {
 	if (options.html !== false) {
 		if (typeof(options.html) === 'function') {
-			$elt.html(options.html(value, $elt, key, data));
+			elt.innerHTML = options.html(value, elt, key, data);
 		} else {
-			$elt.html(value);
+			elt.innerHTML = value;
 		}
 		return;
 	}
 	if (options.text) {
-		$elt.text(value);
+		elt.textContent = value;
 		return;
 	}
 
-	var elt = $elt[0]; // Plain Old Js object
 	var tag = elt.tagName.toLowerCase();
 	switch(tag) {
 		case 'input':
+		case 'textarea':
 			switch(elt.type) {
 				case 'checkbox':
 				case 'radio':
-					// if (typeof(value) === 'boolean') {
-					$(elt).prop('checked', !!value);
-					// } else {
-					// }
+					if (typeof(value) === 'boolean') {
+						elt.checked = !!value;
+					} else {
+						elt.value = value;
+					}
 					break;
 				default:
-					$(elt).val(value);
+					elt.value = value;
 					break;
 			}
 			break;
 		case 'select':
-		case 'textarea':
-			$elt.val(value);
+			selectOption(elt, value);
 			break;
 		default:
-			$elt.text(value);
+			elt.textContent = value;
+			break;
 	}
 }
 
@@ -69,62 +129,101 @@ function getBindableSelector(options) {
 	return selector;
 }
 
+function filterBindableByKey($bindable, data, options) {
+	var out = new Map();
 
-module.exports = function(data, $rootElt, options) {
-	options = Object.assign({
-		attributes: ['data-bind', 'name'],
-		bindable:   'input,select,textarea,button',
-		debug:      false,
-		direction:  'both', // dom|model|both
-		html:       false,
-		observers:  [],
-		text:       false
-	}, options);
-
-	$rootElt = $($rootElt);
-	console.debug('ato root element', $rootElt);
-	if (options.observers) {
-		options.observers = $(options.observers);
+	console.log(typeof($bindable), $bindable);
+	for(let k in data) {
+		if (k === options.privateDataKey) {
+			continue;
+		}
+		for(let i=0; i < $bindable.length; i++) {
+			let elt       = $bindable[i];
+			var attribute = getKeyFromElement(elt, options);
+			var key       = elt.getAttribute(attribute);
+			if (key       === k) {
+				if (!out.has(key)) {
+					out.set(key, []);
+				}
+				out.get(key).push(elt);
+			}
+		}
 	}
+	return out;
+}
 
-	var privateDataKey = '.ato';
+function initPrivateData(data, options) {
+	var privateDataKey = options.privateDataKey;
 	if (!(privateDataKey in data)) {
 		data[privateDataKey] = {};
 	}
-
-	function filterBindableByKey($bindable, data, options) {
-		var out = {};
-		for(let k in data) {
-			if (k === privateDataKey) {
-				continue;
-			}
-			$bindable.each(function() {
-				var attribute = getKeyFromElement(this, options);
-				var key       = this.getAttribute(attribute);
-				if (key === k) {
-					out[key] = out[key] || [];
-					out[key].push(this);
-				}
-			});
-		}
-
-		Object.keys(out).map(k => out[k] = $(out[k]));
-
-		return out;
-	}
-
-
-	var selector       = getBindableSelector(options);
-	var $bindable      = $rootElt.find(selector);
-	var $bindableByKey = filterBindableByKey($bindable, data, options);
-
 	data[privateDataKey].observers = data[privateDataKey].observers || {};
 	data[privateDataKey].data      = data[privateDataKey].data || {};
-	var privateData                = data[privateDataKey];
+	return data[privateDataKey];
+}
+
+function getChildElements(root, selector, options) {
+	return Array.prototype.map.call(root.querySelectorAll(selector),
+		elt => { MicroEvent.mixin(elt); return elt; });
+}
+
+function triggerAll(collection, event, value, key, data) {
+	if (!collection || !collection.length) {
+		return;
+	}
+	if (data.length === 1 && Array.isArray(data[0])) {
+		data = data[0];
+	}
+	for(let i=0; i<collection.length; i++) {
+		let elt = collection[i];
+		elt.trigger(event, value, key, data);
+	}
+}
+
+function domOnAll($coll, event, handler) {
+	for(let i=0; i<$coll.length; i++) {
+		let elt = $coll[i];
+		addEventListener(elt, event, handler);
+	}
+}
+
+function customOnAll($coll, event, handler) {
+	for(let i=0; i<$coll.length; i++) {
+		let elt = $coll[i];
+		elt.on(event, handler);
+	}
+}
+
+function domOffAll($coll, event) {
+	for(let i=0; i<$coll.length; i++) {
+		let elt = $coll[i];
+		removeEventListener(elt, event, handler);
+	}
+}
+
+function Ato(data, $rootElt, options) {
+	options = Object.assign({
+		attributes:     ['data-bind', 'name'],
+		bindable:       'input,select,textarea,button',
+		debug:          false,
+		direction:      'both', // dom|model|both
+		html:           false,
+		privateDataKey: '.ato',
+		text:           false
+	}, options);
+
+	if (typeof($rootElt) === 'string') {
+		$rootElt = document.querySelector($rootElt);
+	}
+
+	var privateData    = initPrivateData(data, options);
+	var selector       = getBindableSelector(options);
+	var $bindable      = getChildElements($rootElt, selector, options);
+	var $bindableByKey = filterBindableByKey($bindable, data, options);
 
 	if (options.direction == 'both' || options.direction == 'dom') {
 		for(let k in data) {
-			if (k === privateDataKey) {
+			if (k === options.privateDataKey) {
 				continue;
 			}
 
@@ -134,7 +233,7 @@ module.exports = function(data, $rootElt, options) {
 			if (k in privateData.data) {
 				// Already bound!
 				// @todo add to observers
-				observers.add($bindableByKey[k]);
+				observers.add($bindableByKey.get(k));
 				continue;
 			}
 
@@ -144,7 +243,7 @@ module.exports = function(data, $rootElt, options) {
 
 			privateData.data[k] = data[k];
 			delete(data[k]);
-			observers.add($bindableByKey[k]);
+			observers.add($bindableByKey.get(k));
 
 			Object.defineProperty(data, k, {
 				get: function() {
@@ -155,12 +254,10 @@ module.exports = function(data, $rootElt, options) {
 				},
 				set: function(val) {
 					privateData.data[k] = val;
-					if (options.observers) {
-						options.observers.trigger('modelChanged', [val, k, data]);
-					}
 					observers.forEach(
-						$coll => $coll && $coll.trigger('modelChanged', [val, k, data])
+						coll => { triggerAll(coll, 'modelChanged', val, k, data); }
 					);
+					data.trigger('change.ato', val, k);
 					if (options.debug) {
 						console.debug(`ato: set ${k} to ${val} => '${privateData.data[k]}`);
 					}
@@ -173,34 +270,28 @@ module.exports = function(data, $rootElt, options) {
 
 
 	if (options.direction == 'both' || options.direction == 'dom') {
-		$bindable
-		.off('modelChanged.ato')
-		.on('modelChanged.ato', function(e, value, key, data) {
+		// ($bindable, 'modelChanged.ato');
+
+		customOnAll($bindable, 'modelChanged', function(value, key, data) {
 			var eltKey = this.getAttribute(getKeyFromElement(this, options));
 			if (eltKey == key) {
 				if (options.debug) {
 					console.debug('ato.modelChanged event', this, key, value, data);
 				}
-				var $this = $(this);
-				setValueOnElement($this, value, key, data, options);
-				if (typeof(options.onUpdate) === 'function') {
-					options.onUpdate.call($this, value, key, data);
-				}
+				setValueOnElement(this, value, key, data, options);
+				data.trigger('updated.ato', this, key, value, data);
 			}
 		});
 	}
 
 	if (options.direction == 'both' || options.direction == 'model') {
-		$bindable.on('input.ato', function(e) {
+		domOnAll($bindable, 'input', function(e) {
 			var eltKeyAttr = getKeyFromElement(this, options);
 			var eltKey     = this.getAttribute(eltKeyAttr);
 			if (options.debug) {
 				console.debug(`ato: ${e.type} on ${eltKey}`);
 			}
 			data[eltKey] = getValueFromElement(this, options);
-			if (options.observers) {
-				// options.observers.trigger('modelChanged', [val, k, data]);
-			}
 			if (options.debug) {
 				console.debug(`ato: DOM->Model set ${eltKey} = ${data[eltKey]}`);
 			}
@@ -208,5 +299,10 @@ module.exports = function(data, $rootElt, options) {
 		});
 	}
 
+	MicroEvent.mixin(data);
+
 	return data;
 };
+
+
+module.exports = Ato;
