@@ -56,12 +56,12 @@ module.exports = {
 		return 'value';
 	},
 
-	getKeyFromElement: function(elt, validAttr) {
+	getEltKey: function(elt, validAttr) {
 		var keys = validAttr.filter(k => elt.hasAttribute(k));
 		return keys.length ? keys[0] : false;
 	},
 
-	getValueFromElement: function(elt, asText) {
+	getValue: function(elt, asText) {
 		if (asText) {
 			return elt.textContent;
 		}
@@ -79,7 +79,7 @@ module.exports = {
 		return elt[attr];
 	},
 
-	setValueOnElement: function(elt, value, key, data, options) {
+	setValue: function(elt, value, key, data, options) {
 		var html = options.html;
 		if (typeof(html) === 'object') {
 			html = (key in html) ? html[key] : false;
@@ -132,7 +132,7 @@ module.exports = {
 			}
 			for(let i=0; i < $bindable.length; i++) {
 				let elt       = $bindable[i];
-				var attribute = this.getKeyFromElement(elt, validAttr);
+				var attribute = this.getEltKey(elt, validAttr);
 				var key       = elt.getAttribute(attribute);
 				if (key       === k) {
 					if (!out.has(key)) {
@@ -145,7 +145,7 @@ module.exports = {
 		return out;
 	},
 
-	defineSimpleDataProperty: function(obj, name, value) {
+	dataProp: function(obj, name, value) {
 		return Object.defineProperty(obj, name, {
 			value:      value,
 			enumerable: false
@@ -156,7 +156,7 @@ module.exports = {
 		var privateDataKey = options.privateDataKey;
 		if (!(privateDataKey in data)) {
 			data[privateDataKey] = {};
-			this.defineSimpleDataProperty(data, privateDataKey, {
+			this.dataProp(data, privateDataKey, {
 				observers: {},
 				data:      {}
 			});

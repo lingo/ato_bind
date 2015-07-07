@@ -80,7 +80,7 @@ function Ato(data, $rootElt, options) {
 			});
 		}
 
-		data.on('ato.modelChanged', function(e, key, value) {
+		data.on('ato.modelChanged', function(key, value) {
 			var elts = $bindableByKey.get(key);
 			if (!elts) {
 				return;
@@ -90,7 +90,7 @@ function Ato(data, $rootElt, options) {
 				if (options.debug) {
 					console.debug(`ato.event: modelChanged on '${elt}' -> '${key}'`, elt, key, value, data);
 				}
-				AtoFn.setValueOnElement(elt, value, key, data, options);
+				AtoFn.setValue(elt, value, key, data, options);
 				data.trigger('update', elt, key, value);
 			}
 		});
@@ -99,12 +99,12 @@ function Ato(data, $rootElt, options) {
 	if (options.direction == 'both' || options.direction == 'model') {
 		AtoFn.on($rootElt, 'input', function(e) {
 			var elt = e.target || this;
-			var eltKeyAttr = AtoFn.getKeyFromElement(elt, options.attributes);
+			var eltKeyAttr = AtoFn.getEltKey(elt, options.attributes);
 			var eltKey     = elt.getAttribute(eltKeyAttr);
 			if (options.debug) {
 				console.debug(`ato.event: '${e.type}' on '${elt}' -> '${eltKey}'`);
 			}
-			data[eltKey] = AtoFn.getValueFromElement(elt, options.text);
+			data[eltKey] = AtoFn.getValue(elt, options.text);
 			if (options.debug) {
 				console.debug(`ato: DOM->Model set '${eltKey}' = '${data[eltKey]}'`);
 			}

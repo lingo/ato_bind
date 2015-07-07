@@ -11,6 +11,7 @@ var viewModel = {
 	'paragraph': '',
 	'latinspam': ''
 };
+var color = {red: 0, green: 0, blue: 0, hex: 0};
 
 function ready(fn) {
   if (document.readyState != 'loading'){
@@ -34,11 +35,6 @@ ready(function() {
 	cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
 	proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
 
-	// ato(viewModel, $('#form_container'), {
-		// debug:     true,
-		// bindable:  'p select span input div'
-	// });
-
 	ato(viewModel, $('#form_container'), {
 		html:     {
 			paragraph: true
@@ -46,7 +42,7 @@ ready(function() {
 		bindable: 'textarea div select p span input'
 	});
 
-	viewModel.on('change.ato', function(key, value) {
+	function showModel() {
 		$('#dump').textContent = JSON.stringify(
 			viewModel,
 			(key, val) => key != '.ato' ? val : undefined,
@@ -54,6 +50,21 @@ ready(function() {
 			);
 		if(typeof(hljs) !== 'undefined') {
 			hljs.highlightBlock($('pre code'));
+		}
+	}
+
+	viewModel.on('change', function(key, value) {
+		showModel();
+		if (key === 'latinspam') {
+			viewModel.paragraph = text.replace(new RegExp(`(${viewModel.latinspam})`, 'gi'), '<strong class="highlight">$1</strong>');
+		}
+	});
+
+
+	ato(color, $('.color'));
+	color.on('change', (out, key,value) => {
+		if (key !== 'hex') {
+			color.hex = `<div style="background: rgb(${color.red},${color.green},${color.blue});"></div>`;
 		}
 	});
 
@@ -76,4 +87,5 @@ ready(function() {
 `;
 
 	window.viewModel = viewModel;
+	window.color     = color;
 });
