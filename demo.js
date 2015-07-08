@@ -36,7 +36,8 @@ ready(function() {
 	proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
 
 	ato(viewModel, $('#form_container'), {
-		html:     {
+		debug: true,
+		html:  {
 			paragraph: true
 		},
 		bindable: 'textarea div select p span input'
@@ -45,6 +46,12 @@ ready(function() {
 	function showModel() {
 		$('#dump').textContent = JSON.stringify(
 			viewModel,
+			(key, val) => key != '.ato' ? val : undefined,
+			"  "
+			)
+		+ "\n\n"
+		+ JSON.stringify(
+			color,
 			(key, val) => key != '.ato' ? val : undefined,
 			"  "
 			);
@@ -56,17 +63,22 @@ ready(function() {
 	viewModel.on('change', function(key, value) {
 		showModel();
 		if (key === 'latinspam') {
-			viewModel.paragraph = text.replace(new RegExp(`(${viewModel.latinspam})`, 'gi'), '<strong class="highlight">$1</strong>');
+			viewModel.paragraph = text.replace(
+				new RegExp(`(${viewModel.latinspam})`, 'gi'),
+				'<strong class="highlight">$1</strong>'
+			);
 		}
 	});
 
 
-	ato(color, $('.color'));
-	color.on('change', (out, key,value) => {
+	ato(color, $('.color'), {debug: true, html: true, bindable: 'input,div'});
+	color.on('change', (key, value) => {
+		showModel();
 		if (key !== 'hex') {
-			color.hex = `<div style="background: rgb(${color.red},${color.green},${color.blue});"></div>`;
+			color.hex = `<div style="width: 100%; height: 100%; background: rgb(${color.red},${color.green},${color.blue});"></div>`;
 		}
 	});
+
 
 	viewModel.paragraph = `<style>
 #test {

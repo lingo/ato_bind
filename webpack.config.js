@@ -17,7 +17,7 @@ module.exports = {
 		path:     './dist',
 		filename: '[name].js',
         sourceMapFilename: '[file]_[hash].map',
-        publicPath:        '/ato/dist/'
+        publicPath:        '/dist/'
 	},
     externals: {
         //            require("jquery") is external and available

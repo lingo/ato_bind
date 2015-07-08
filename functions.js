@@ -157,10 +157,30 @@ module.exports = {
 		if (!(privateDataKey in data)) {
 			data[privateDataKey] = {};
 			this.dataProp(data, privateDataKey, {
+				event:     {
+					listeners: null
+				},
 				observers: {},
 				data:      {}
 			});
 		}
+		if ('.ato.set' in data) {
+			return data[privateDataKey];
+		}
+		this.dataProp(data, '.ato.set', function(k, val, flags) {
+			var privateData = data[privateDataKey];
+			if (!flags) {
+				flags = { noTrigger: false, fromInput: false };
+			}
+			privateData.data[k] = val;
+			// Internal event
+			data.trigger('ato.modelChanged', k, val, flags);
+			// Event for library users
+			data.trigger('change', k, val);
+			if (options.debug) {
+				console.debug(`ato.set '${k}' to '${val}'`);
+			}
+		});
 		return data[privateDataKey];
 	},
 
