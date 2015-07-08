@@ -71,7 +71,14 @@ ready(function() {
 	});
 
 
-	ato(color, $('.color'), {debug: true, html: true, bindable: 'input,div'});
+	ato(color, $('.color'), {
+		debug: true,
+		html: {
+			hex: true
+		},
+		bindable: 'input,div'
+	});
+
 	color.on('change', (key, value) => {
 		showModel();
 		if (key !== 'hex') {
