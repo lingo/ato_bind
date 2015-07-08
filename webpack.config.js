@@ -15,7 +15,7 @@ module.exports = {
     },
 	output: {
 		library:       		'Ato',
-		libraryTarget: 		'var',
+		libraryTarget: 		'umd',
 		path:          		'./dist',
 		filename:      		'[name].js',
         sourceMapFilename: 	'[file]_[hash].map',
