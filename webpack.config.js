@@ -4,7 +4,7 @@ var path    = require('path');
 // webpack.config.js
 module.exports = {
 	entry: {
-		ato: ["ato.js"],
+		ato: "ato.js",
 		app: ['demo.js']
 	},
     resolve: {
@@ -14,10 +14,12 @@ module.exports = {
     	}
     },
 	output: {
-		path:     './dist',
-		filename: '[name].js',
-        sourceMapFilename: '[file]_[hash].map',
-        publicPath:        '/dist/'
+		library:       		'Ato',
+		libraryTarget: 		'var',
+		path:          		'./dist',
+		filename:      		'[name].js',
+        sourceMapFilename: 	'[file]_[hash].map',
+        publicPath:        	'/dist/'
 	},
     externals: {
         //            require("jquery") is external and available
@@ -41,9 +43,9 @@ module.exports = {
 	},
 	devtool: '#source-map',
 	plugins: [
-		new webpack.DefinePlugin({
-			ATO_LIBRARY: "'microevent'"
-		})
+		// new webpack.DefinePlugin({
+		// 	ATO_LIBRARY: "'microevent'"
+		// })
 	]
 };
 

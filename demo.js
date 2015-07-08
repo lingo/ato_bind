@@ -2,7 +2,7 @@
 
 var $ = document.querySelector.bind(document);
 
-var ato = require('ato');
+var ato = Ato; //require('ato');
 /**
  * This is the view model, here exposed
  * globally so people can play with it in devtools
@@ -36,7 +36,6 @@ ready(function() {
 	proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`;
 
 	ato(viewModel, $('#form_container'), {
-		debug: true,
 		html:  {
 			paragraph: true
 		},
@@ -72,7 +71,6 @@ ready(function() {
 
 
 	ato(color, $('.color'), {
-		debug: true,
 		html: {
 			hex: true
 		},
